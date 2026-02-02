@@ -1,28 +1,47 @@
 # Smart Screenshot QA Skill
 
-A Claude Code skill that dramatically reduces token consumption during browser-based QA by choosing the most efficient verification method for each check.
+A Claude Code skill that stops screenshot spirals and dramatically reduces token consumption during browser-based QA.
 
 ## The Problem
 
-When using Claude Code for frontend QA, it's easy to fall into expensive patterns:
-- Taking full-page screenshots after every small change
-- Using screenshots to verify things the DOM can tell you instantly
-- Getting stuck in screenshot loops trying to make things "perfect"
-- Dumping the entire DOM when you only need interactive elements
+When using Claude Code for frontend QA, the real token killer isn't individual screenshots—it's **loops**:
 
-These habits can burn through 10-50x more tokens than necessary.
+```
+change → screenshot → tweak → screenshot → "let me check" → screenshot → "one more" → screenshot
+```
+
+5 unnecessary screenshots = 3,500-7,500 wasted tokens. Per component. Per session.
+
+Other costly patterns:
+- Full-page screenshots when you only need one component
+- Screenshots to verify things the DOM can answer instantly
+- Full DOM dumps on complex pages (can cost 15-20x more than a screenshot)
+
+## Token Costs (Tested on GitHub.com)
+
+| Method | Tokens | Best For |
+|--------|--------|----------|
+| Targeted zoom (region) | 100-200 | Component styling, specific elements |
+| `find` (natural language) | 500-1,000 | "Is there a submit button?" without full DOM |
+| `read_page` (filter: "interactive") | 800-2,000 | Structural checks, element existence |
+| Full viewport screenshot | 1,000-1,500 | Layout verification, final sign-off |
+| `read_page` (full DOM) | 6,000-25,000+ | Avoid on complex pages |
+
+**Key insights:**
+- Targeted zoom is **5-10x cheaper** than full screenshots
+- `find` is great for natural language queries without dumping the whole DOM
+- Filtered DOM is often cheaper AND faster for structural questions
+- Full DOM can cost **15-20x more** than a screenshot
 
 ## The Solution
 
-This skill teaches Claude to pick the cheapest verification method that actually answers the question:
+This skill teaches Claude to:
 
-| Verification Need | Best Method | Token Cost |
-|-------------------|-------------|------------|
-| Does element exist? | DOM inspection | ~50 |
-| Check text/attributes | DOM inspection | ~50 |
-| Component styling | Targeted zoom | 100-200 |
-| Layout/alignment | Single screenshot | 700-1500 |
-| Full DOM dump | Avoid | Up to 12,500 |
+1. **Use targeted zoom** for component checks (5-10x cheaper than full screenshots)
+2. **Use `find`** for natural language element queries (mid-cost, avoids full DOM)
+3. **Use filtered DOM** for structural questions (`filter: "interactive"` saves 60-80%)
+4. **Batch changes** before taking screenshots (3-5 changes, then verify)
+5. **Exit when done** - One verification that passes = move on
 
 ## Installation
 
@@ -36,20 +55,36 @@ The skill activates automatically when Claude Code detects browser-based QA task
 /smart-screenshot-qa
 ```
 
-## Key Principles
+## Decision Tree
 
-1. **DOM first** - If you can answer the question with `read_page`, don't take a screenshot
-2. **Zoom over full screenshots** - Use targeted region captures for component checks
-3. **Batch changes** - Make 3-5 changes before verifying visually
-4. **Exit when done** - One verification that passes = move on
+| Question | Method |
+|----------|--------|
+| "Is there a [thing]?" | `find` (natural language) |
+| Does element exist? | `read_page` filter:"interactive" |
+| Check text/attributes? | `read_page` filter:"interactive" |
+| Component look right? | Targeted zoom |
+| Layout/alignment correct? | Single screenshot (after batching) |
+| Final sign-off? | One screenshot, then stop |
+
+## Anti-Patterns to Avoid
+
+1. **Screenshot loops** - One verification that passes = done
+2. **Full screenshot for one component** - Use targeted zoom (5-10x cheaper)
+3. **Screenshot after every change** - Batch 3-5 changes first
+4. **Full DOM dump** - Always use `filter: "interactive"` or `find`
+
+## Note on imageIds
+
+Screenshot imageIds persist for the browser session but disappear from context when it gets summarized. If you need to reference a screenshot later in a long session, note the key visual details in text immediately after taking it.
 
 ## Example Savings
 
-| Task | Without Skill | With Skill | Savings |
-|------|---------------|------------|---------|
-| Verify button exists | 1,200 tokens | 50 tokens | 96% |
-| Check 5 form fields | 6,000 tokens | 250 tokens | 96% |
-| Style a component | 4,800 tokens | 400 tokens | 92% |
+| Scenario | Without Skill | With Skill | Savings |
+|----------|---------------|------------|---------|
+| Verify button styling | 1,200 tokens (full screenshot) | 150 tokens (zoom) | 87% |
+| "Is there a submit button?" | 2,000 tokens (filtered DOM) | 700 tokens (find) | 65% |
+| Check 5 elements exist | 6,000 tokens (5 screenshots) | 1,500 tokens (1 DOM read) | 75% |
+| QA session with loops | 15,000 tokens | 2,500 tokens | 83% |
 
 ## License
 
