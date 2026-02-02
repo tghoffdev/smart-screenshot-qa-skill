@@ -7,6 +7,13 @@ description: Efficient frontend QA using the right verification method. Use when
 
 Stop the screenshot spirals. Choose the right verification method for the job.
 
+## When NOT to Use This Skill
+
+This skill optimizes for verify-and-move-on. Skip it when:
+- Visual regression testing requires systematic before/after comparisons
+- Accessibility audits need comprehensive coverage
+- QA specs explicitly require thoroughness over efficiency
+
 ## Token Costs (Tested on GitHub.com)
 
 | Method | Tokens | Best For |
@@ -21,7 +28,10 @@ Stop the screenshot spirals. Choose the right verification method for the job.
 
 ## Decision Tree
 
-**"Does element X exist / have correct text / attributes?"**
+**"Is there a submit button somewhere?" (don't know the selector)**
+→ `find` with natural language. Mid-cost, no selector needed.
+
+**"Does element X exist / have correct text / attributes?" (know what you're looking for)**
 → `read_page` with `filter: "interactive"`. Faster than screenshots for structural checks.
 
 **"Does this button/component look right?"**
