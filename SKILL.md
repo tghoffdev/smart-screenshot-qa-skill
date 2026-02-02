@@ -17,12 +17,12 @@ Stop the screenshot spirals. Choose the right verification method for the job.
 | Full viewport screenshot | 1,000-1,500 | Layout verification, final sign-off |
 | `read_page` (full DOM) | 6,000-25,000+ | Avoid on complex pages |
 
-**Key insight:** Targeted zoom is 5-10x cheaper than full screenshots. Filtered DOM is often cheaper AND faster than screenshots for structural questions. Full DOM can cost 15-20x more than a screenshot.
+**Key insight:** Filtered DOM and full screenshots are comparable in cost. The real wins: targeted zoom is 5-10x cheaper than full screenshots, and avoiding full DOM dumps saves 15-20x. DOM is faster for structural questions, not necessarily cheaper.
 
 ## Decision Tree
 
 **"Does element X exist / have correct text / attributes?"**
-→ `read_page` with `filter: "interactive"`. Cheaper and faster than screenshots.
+→ `read_page` with `filter: "interactive"`. Faster than screenshots for structural checks.
 
 **"Does this button/component look right?"**
 → `zoom` on that specific region. 5-10x cheaper than full screenshot.
@@ -37,10 +37,11 @@ Stop the screenshot spirals. Choose the right verification method for the job.
 
 1. **Screenshot loops** - Taking the same screenshot over and over "to make sure." One verification that passes = done.
 2. **Full screenshot for one component** - Use targeted zoom. 5-10x cheaper.
-3. **Screenshot after every change** - Batch 3-5 changes, then one screenshot.
+3. **Screenshot after every change** - Batch 3-5 styling/content changes, then one screenshot. For complex layout changes (flexbox, z-index, grid), verify sooner to isolate regressions.
 4. **Retaking screenshots you already have** - Reference existing imageId if nothing visual changed.
 5. **Full DOM dump on complex pages** - Always use `filter: "interactive"` (60-80% savings).
 6. **Full-page scroll screenshots** - Use zoom for specific sections.
+7. **Retrying failed zooms** - If `zoom` returns empty or ambiguous, fall back to full screenshot immediately. Don't retry.
 
 ## Why Loops Are The Real Problem
 
@@ -76,7 +77,7 @@ Do NOT keep screenshotting to make it "perfect" or to "double-check."
 
 ```
 "Is there a [thing]?"  → find (natural language, mid-cost)
-Element exists?        → read_page filter:"interactive" (cheapest for structural)
+Element exists?        → read_page filter:"interactive" (fastest for structural)
 Text/attribute check   → read_page filter:"interactive"
 Component styling      → zoom (5-10x cheaper than full screenshot)
 Layout verification    → single screenshot after batching
